@@ -68,33 +68,6 @@ public class PtpClient implements ClientModInitializer {
         PtpConfigScreen.registerCommand();
         ProjectileRegistry.init();
         registerKeyMappings();
-
-        // Reset handshake state on join
-        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
-            serverHasMod = false;
-
-            // Always enabled in singleplayer
-            if (client.hasSingleplayerServer() || client.getCurrentServer().isLan()) {
-                serverHasMod = true;
-                return;
-            }
-
-            // Send handshake to server
-            if(ClientPlayNetworking.canSend(HANDSHAKE_C2SPayload.ID)) {
-                LOGGER.info("[PTP] Sending handshake to server...");
-                ClientPlayNetworking.send(new HANDSHAKE_C2SPayload("Check if is installed on server"));
-            }
-            else{
-                LOGGER.info("[PTP] Can't send handshake to server! Server mod might be too old or missing.");
-            }
-        });
-
-        // Receive handshake reply
-        ClientPlayNetworking.registerGlobalReceiver(HANDSHAKE_S2CPayload.ID,
-            (payload, context) -> {
-                LOGGER.info("[PTP] Received handshake from server!");
-                serverHasMod = true;
-        });
         
         LevelRenderEvents.AFTER_SOLID_FEATURES.register(context -> {
             renderOverlay(context);
@@ -135,7 +108,6 @@ public class PtpClient implements ClientModInitializer {
     }
 
     private static void showItemTrajectory(LevelRenderContext context, Player player, ProjectileData projectileData, int handMultiplier) {
-        if(!isEnabled(projectileData)) return;
         float tickProgress = getTickProgress();
         Vec3 eye = player.getEyePosition(tickProgress);
         Vec3 pos = projectileData.position == null? player.getEyePosition() : projectileData.position;
@@ -153,9 +125,6 @@ public class PtpClient implements ClientModInitializer {
         Vec3 eye = player.getEyePosition(tickProgress);
 
         for(ProjectileData projectileData : projectileDataList){
-
-            if (!isEnabled(projectileData)) continue;
-
             Vec3 pos = projectileData.position == null? player.getEyePosition() : projectileData.position;
             Vec3 handToEyeDelta = GetHandToEyeDelta(player, projectileData.offset, pos, eye, handMultiplier, tickProgress);
 
@@ -360,11 +329,7 @@ public class PtpClient implements ClientModInitializer {
     }
 
     public static boolean isEnabled() {
-        return client.hasSingleplayerServer() || serverHasMod;
-    }
-
-    public static boolean isEnabled(ProjectileData projectileData) {
-        return client.hasSingleplayerServer() || serverHasMod || projectileData.bypassAntiCheat;
+        return true;
     }
 
     public static float getTickProgress(){
